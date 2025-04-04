@@ -332,6 +332,7 @@ checksum = "3954d50fe15b02142bf25d3b8bdadb634ec3948f103d04ffe3031bc8fe9d7058"
 dependencies = [
  "equivalent",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -756,6 +757,7 @@ version = "0.0.0"
 dependencies = [
  "dirs",
  "garde",
+ "indexmap",
  "node-semver",
  "serde",
  "serde_json",

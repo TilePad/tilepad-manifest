@@ -5,9 +5,10 @@
 use std::{collections::HashMap, fmt::Display};
 
 use garde::{
-    Validate,
+    Path, Report, Validate,
     error::{Kind, PathComponentKind},
 };
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use thiserror::Error;
@@ -34,7 +35,27 @@ pub struct Manifest {
 
     /// Map of available plugin actions
     #[garde(dive)]
-    pub actions: HashMap<ActionId, ManifestAction>,
+    pub actions: ActionMap,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ActionMap(pub IndexMap<ActionId, ManifestAction>);
+
+impl AsRef<IndexMap<ActionId, ManifestAction>> for ActionMap {
+    fn as_ref(&self) -> &IndexMap<ActionId, ManifestAction> {
+        &self.0
+    }
+}
+
+impl Validate for ActionMap {
+    type Context = ();
+
+    fn validate_into(&self, ctx: &(), mut parent: &mut dyn FnMut() -> Path, report: &mut Report) {
+        for (key, value) in self.0.iter() {
+            let mut path = garde::util::nested_path!(parent, key);
+            value.validate_into(ctx, &mut path, report);
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
@@ -65,6 +86,12 @@ impl Manifest {
 #[garde(transparent)]
 #[serde(transparent)]
 pub struct PluginId(#[garde(custom(is_valid_plugin_name))] pub String);
+
+impl Display for PluginId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl PluginId {
     pub fn as_str(&self) -> &str {

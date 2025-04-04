@@ -4,9 +4,35 @@
 
 use garde::Validate;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
+#[derive(Debug, Error, Clone)]
+pub enum IconsError {
+    #[error(transparent)]
+    Toml(#[from] toml::de::Error),
+    #[error(transparent)]
+    Validation(#[from] garde::Report),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+pub struct Icon {
+    /// Path to the icon file
+    #[garde(length(min = 1))]
+    pub path: String,
+
+    /// Name of the icon
+    #[garde(length(min = 1))]
+    pub name: String,
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct Manifest {
+    #[garde(dive)]
+    pub icons: IconsManifest,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+pub struct IconsManifest {
     /// Unique ID of the icon pack (e.g com.jacobtread.tilepad.obs)
     #[garde(dive)]
     pub id: IconPackId,
@@ -20,6 +46,22 @@ pub struct Manifest {
     pub description: Option<String>,
     #[garde(skip)]
     pub icon: Option<String>,
+}
+
+#[derive(Debug, Error, Clone)]
+pub enum ManifestError {
+    #[error(transparent)]
+    Toml(#[from] toml::de::Error),
+    #[error(transparent)]
+    Validation(#[from] garde::Report),
+}
+
+impl Manifest {
+    pub fn parse(value: &str) -> Result<Manifest, ManifestError> {
+        let manifest: Manifest = toml::from_str(value)?;
+        manifest.validate()?;
+        Ok(manifest)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, Hash, PartialEq, Eq, PartialOrd, Ord)]
