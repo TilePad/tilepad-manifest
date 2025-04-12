@@ -2,7 +2,7 @@
 //!
 //! Manifest definition for plugins
 
-use std::{collections::HashMap, fmt::Display};
+use std::{fmt::Display, str::FromStr};
 
 use garde::{
     Path, Report, Validate,
@@ -13,10 +13,10 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 use thiserror::Error;
 
-/// Version of a node runtime
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+/// Version range of a node runtime
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(transparent)]
-pub struct NodeVersion(pub node_semver::Version);
+pub struct BinaryNodeVersion(pub node_semver::Range);
 
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct Manifest {
@@ -86,6 +86,15 @@ impl Manifest {
 #[garde(transparent)]
 #[serde(transparent)]
 pub struct PluginId(#[garde(custom(is_valid_plugin_name))] pub String);
+
+impl FromStr for PluginId {
+    type Err = garde::Report;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = PluginId(s.to_string());
+        value.validate()?;
+        Ok(value)
+    }
+}
 
 impl Display for PluginId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -189,7 +198,7 @@ pub struct ManifestBinNode {
 
     /// Version of node the program should run using
     #[garde(skip)]
-    pub version: NodeVersion,
+    pub version: BinaryNodeVersion,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
