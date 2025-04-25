@@ -6,10 +6,10 @@ use garde::Validate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error)]
 pub enum IconsError {
     #[error(transparent)]
-    Toml(#[from] toml::de::Error),
+    Json(#[from] serde_json::Error),
     #[error(transparent)]
     Validation(#[from] garde::Report),
 }
@@ -48,17 +48,17 @@ pub struct IconsManifest {
     pub icon: Option<String>,
 }
 
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error)]
 pub enum ManifestError {
     #[error(transparent)]
-    Toml(#[from] toml::de::Error),
+    Json(#[from] serde_json::Error),
     #[error(transparent)]
     Validation(#[from] garde::Report),
 }
 
 impl Manifest {
     pub fn parse(value: &str) -> Result<Manifest, ManifestError> {
-        let manifest: Manifest = toml::from_str(value)?;
+        let manifest: Manifest = serde_json::from_str(value)?;
         manifest.validate()?;
         Ok(manifest)
     }
