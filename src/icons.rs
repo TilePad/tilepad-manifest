@@ -2,6 +2,8 @@
 //!
 //! Manifest definition for icon packs
 
+use std::str::FromStr;
+
 use garde::Validate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -68,6 +70,22 @@ impl Manifest {
 #[garde(transparent)]
 #[serde(transparent)]
 pub struct IconPackId(#[garde(custom(is_valid_icon_pack_name))] pub String);
+
+impl TryFrom<String> for IconPackId {
+    type Error = garde::Report;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_str(&value)
+    }
+}
+
+impl FromStr for IconPackId {
+    type Err = garde::Report;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = IconPackId(s.to_string());
+        value.validate()?;
+        Ok(value)
+    }
+}
 
 impl IconPackId {
     pub fn as_str(&self) -> &str {

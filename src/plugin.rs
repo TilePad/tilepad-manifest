@@ -87,6 +87,13 @@ impl Manifest {
 #[serde(transparent)]
 pub struct PluginId(#[garde(custom(is_valid_plugin_name))] pub String);
 
+impl TryFrom<String> for PluginId {
+    type Error = garde::Report;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_str(&value)
+    }
+}
+
 impl FromStr for PluginId {
     type Err = garde::Report;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -141,6 +148,22 @@ pub struct ActionId(#[garde(custom(is_valid_action_name))] pub String);
 impl ActionId {
     pub fn as_str(&self) -> &str {
         self.0.as_str()
+    }
+}
+
+impl TryFrom<String> for ActionId {
+    type Error = garde::Report;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_str(&value)
+    }
+}
+
+impl FromStr for ActionId {
+    type Err = garde::Report;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = ActionId(s.to_string());
+        value.validate()?;
+        Ok(value)
     }
 }
 
