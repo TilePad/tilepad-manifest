@@ -234,6 +234,29 @@ pub struct ManifestBinNative {
     pub path: String,
 }
 
+impl ManifestBinNative {
+    // Check if the binary is usable on the provided OS and Arch combination
+    pub fn is_usable(&self, os: &OperatingSystem, arch: &Arch) -> bool {
+        self.os.eq(os) && self.arch.eq(arch)
+    }
+
+    // Find a binary thats usable on the provided OS and Arch combination
+    pub fn find_usable<'a>(
+        options: &'a [ManifestBinNative],
+        os: &OperatingSystem,
+        arch: &Arch,
+    ) -> Option<&'a Self> {
+        options.iter().find(|bin| bin.is_usable(os, arch))
+    }
+
+    // Find a binary compatible with the current OS and Arch
+    pub fn find_current(options: &[ManifestBinNative]) -> Option<&Self> {
+        let os = platform_os();
+        let arch = platform_arch();
+        Self::find_usable(options, &os, &arch)
+    }
+}
+
 /// Separators allowed within names
 static NAME_SEPARATORS: [char; 2] = ['-', '_'];
 

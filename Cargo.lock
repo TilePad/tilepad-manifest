@@ -744,7 +744,7 @@ dependencies = [
 
 [[package]]
 name = "tilepad-manifest"
-version = "0.4.0"
+version = "0.5.0"
 dependencies = [
  "dirs",
  "garde",
