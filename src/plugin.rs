@@ -10,6 +10,7 @@ use garde::{
 };
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use thiserror::Error;
 
 use crate::system::{Arch, OperatingSystem, platform_arch, platform_os};
@@ -147,6 +148,18 @@ pub struct ManifestPlugin {
     pub internal: Option<bool>,
 }
 
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Validate)]
+#[serde(default)]
+pub struct ManifestIconOptions {
+    #[garde(skip)]
+    pub padding: Option<u32>,
+    #[garde(skip)]
+    pub background_color: Option<String>,
+    #[garde(skip)]
+    pub border_color: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[garde(transparent)]
 #[serde(transparent)]
@@ -198,6 +211,8 @@ pub struct ManifestAction {
     pub label: String,
     #[garde(skip)]
     pub icon: Option<String>,
+    #[garde(dive)]
+    pub icon_options: Option<ManifestIconOptions>,
     #[garde(skip)]
     pub description: Option<String>,
     #[garde(skip)]
