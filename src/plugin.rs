@@ -18,6 +18,12 @@ use thiserror::Error;
 #[serde(transparent)]
 pub struct BinaryNodeVersion(pub node_semver::Range);
 
+impl AsRef<node_semver::Range> for BinaryNodeVersion {
+    fn as_ref(&self) -> &node_semver::Range {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct Manifest {
     /// Details about the plugin itself
