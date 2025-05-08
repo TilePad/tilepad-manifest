@@ -2,98 +2,24 @@
 //!
 //! Manifest definition for plugins
 
-use std::{fmt::Display, str::FromStr};
-
-use garde::{
-    Path, Report, Validate,
-    error::{Kind, PathComponentKind},
+use crate::{
+    ManifestError,
+    system::{Arch, OperatingSystem, platform_arch, platform_os},
+    validation::{validate_id, validate_name},
 };
+use garde::Validate;
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use thiserror::Error;
+use std::{fmt::Display, str::FromStr};
 
-use crate::system::{Arch, OperatingSystem, platform_arch, platform_os};
-
-/// Version range of a node runtime
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(transparent)]
-pub struct BinaryNodeVersion(pub node_semver::Range);
-
-impl AsRef<node_semver::Range> for BinaryNodeVersion {
-    fn as_ref(&self) -> &node_semver::Range {
-        &self.0
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
-pub struct Manifest {
-    /// Details about the plugin itself
-    #[garde(dive)]
-    pub plugin: ManifestPlugin,
-
-    /// Details for running the plugin
-    /// (Option not specified for internal plugins)
-    #[garde(dive)]
-    pub bin: Option<ManifestBin>,
-
-    /// Category for the manifest actions
-    #[garde(dive)]
-    pub category: ManifestCategory,
-
-    /// Map of available plugin actions
-    #[garde(dive)]
-    pub actions: ActionMap,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ActionMap(pub IndexMap<ActionId, ManifestAction>);
-
-impl AsRef<IndexMap<ActionId, ManifestAction>> for ActionMap {
-    fn as_ref(&self) -> &IndexMap<ActionId, ManifestAction> {
-        &self.0
-    }
-}
-
-impl Validate for ActionMap {
-    type Context = ();
-
-    fn validate_into(&self, ctx: &(), mut parent: &mut dyn FnMut() -> Path, report: &mut Report) {
-        for (key, value) in self.0.iter() {
-            let mut path = garde::util::nested_path!(parent, key);
-            value.validate_into(ctx, &mut path, report);
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
-pub struct ManifestCategory {
-    #[garde(length(min = 1))]
-    pub label: String,
-    #[garde(skip)]
-    pub icon: Option<String>,
-}
-
-#[derive(Debug, Error)]
-pub enum ManifestError {
-    #[error(transparent)]
-    Json(#[from] serde_json::Error),
-    #[error(transparent)]
-    Validation(#[from] garde::Report),
-}
-
-impl Manifest {
-    pub fn parse(value: &str) -> Result<Manifest, ManifestError> {
-        let manifest: Manifest = serde_json::from_str(value)?;
-        manifest.validate()?;
-        Ok(manifest)
-    }
-}
-
+/// Unique ID for a plugin
+///
+/// Uses reverse domain syntax (i.e com.example.my-plugin)
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[garde(transparent)]
 #[serde(transparent)]
-pub struct PluginId(#[garde(custom(is_valid_plugin_name))] pub String);
+pub struct PluginId(#[garde(custom(validate_id))] pub String);
 
 impl TryFrom<String> for PluginId {
     type Error = garde::Report;
@@ -129,41 +55,121 @@ impl AsRef<str> for PluginId {
     }
 }
 
+/// Version range of a node runtime
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct BinaryNodeVersion(pub node_semver::Range);
+
+impl AsRef<node_semver::Range> for BinaryNodeVersion {
+    fn as_ref(&self) -> &node_semver::Range {
+        &self.0
+    }
+}
+
+/// Manifest file format for plugins
+#[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
-pub struct ManifestPlugin {
+pub struct PluginManifest {
+    /// Details about the plugin itself
+    #[garde(dive)]
+    pub plugin: MPlugin,
+
+    /// Details for running the plugin
+    /// (Option not specified for internal plugins)
+    #[garde(dive)]
+    pub bin: Option<MBin>,
+
+    /// Category for the manifest actions
+    #[garde(dive)]
+    pub category: MCategory,
+
+    /// Map of available plugin actions
+    #[garde(dive)]
+    pub actions: ActionMap,
+}
+
+impl TryFrom<&str> for PluginManifest {
+    type Error = ManifestError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let manifest: PluginManifest = serde_json::from_str(value)?;
+        manifest.validate()?;
+        Ok(manifest)
+    }
+}
+
+impl TryFrom<&[u8]> for PluginManifest {
+    type Error = ManifestError;
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        let manifest: PluginManifest = serde_json::from_slice(value)?;
+        manifest.validate()?;
+        Ok(manifest)
+    }
+}
+
+impl PluginManifest {
+    #[inline]
+    pub fn parse(value: &str) -> Result<PluginManifest, ManifestError> {
+        Self::try_from(value)
+    }
+}
+
+/// Plugin details section of the manifest
+#[skip_serializing_none]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+pub struct MPlugin {
     /// Unique ID of the plugin (e.g com.jacobtread.tilepad.obs)
     #[garde(dive)]
     pub id: PluginId,
+    /// Name of the plugin
     #[garde(length(min = 1))]
     pub name: String,
+    /// Current version of the plugin
     #[garde(length(min = 1))]
     pub version: String,
+    /// List of authors for the plugin
     #[garde(skip)]
     pub authors: Vec<String>,
+    /// Description of what the plugin does
     #[garde(skip)]
     pub description: Option<String>,
+    /// Icon for the plugin
     #[garde(skip)]
     pub icon: Option<String>,
+    /// Whether the plugin is an internal plugin
     #[garde(skip)]
     pub internal: Option<bool>,
 }
 
-#[skip_serializing_none]
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Validate)]
-#[serde(default)]
-pub struct ManifestIconOptions {
-    #[garde(skip)]
-    pub padding: Option<u32>,
-    #[garde(skip)]
-    pub background_color: Option<String>,
-    #[garde(skip)]
-    pub border_color: Option<String>,
+/// Ordered map of actions defined within the plugin
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ActionMap(pub IndexMap<ActionId, ManifestAction>);
+
+impl AsRef<IndexMap<ActionId, ManifestAction>> for ActionMap {
+    fn as_ref(&self) -> &IndexMap<ActionId, ManifestAction> {
+        &self.0
+    }
 }
 
+/// Definition of the category to place the plugin actions within
+#[skip_serializing_none]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+pub struct MCategory {
+    /// Label for the category in the actions sidebar
+    #[garde(length(min = 1))]
+    pub label: String,
+    /// Icon to show in the actions sidebar
+    #[garde(skip)]
+    pub icon: Option<String>,
+}
+
+/// Name of an action
+///
+/// Must be [a-zA-Z_-] (i.e example_action, my-action, MyAction)
 #[derive(Debug, Clone, Serialize, Deserialize, Validate, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[garde(transparent)]
 #[serde(transparent)]
-pub struct ActionId(#[garde(custom(is_valid_action_name))] pub String);
+pub struct ActionId(#[garde(custom(validate_name))] pub String);
 
 impl ActionId {
     pub fn as_str(&self) -> &str {
@@ -199,29 +205,55 @@ impl Display for ActionId {
     }
 }
 
-impl PathComponentKind for ActionId {
-    fn component_kind() -> Kind {
-        Kind::Key
-    }
-}
-
+/// Manifest action definition
+#[skip_serializing_none]
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct ManifestAction {
+    /// Label for the action, shown in the sidebar
     #[garde(length(min = 1))]
     pub label: String,
+
+    /// Icon for the action, shown in the sidebar and
+    /// used as the default icon when added to the grid
     #[garde(skip)]
     pub icon: Option<String>,
+
+    /// Default options for the icon when added to the grid
+    /// as a tile
     #[garde(dive)]
-    pub icon_options: Option<ManifestIconOptions>,
+    pub icon_options: Option<ManifestActionIconOptions>,
+
+    /// Description for the action, shown as a tooltip when hovering
+    /// the action
     #[garde(skip)]
     pub description: Option<String>,
+
+    /// Path to the inspector HTML file to use for configuring the action
     #[garde(skip)]
     pub inspector: Option<String>,
 }
 
+/// Default options for an action icon
+#[skip_serializing_none]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Validate)]
+#[serde(default)]
+pub struct ManifestActionIconOptions {
+    /// Padding in pixels to pad the icon with
+    #[garde(skip)]
+    pub padding: Option<u32>,
+
+    /// Color for the tile background behind the icon
+    #[garde(skip)]
+    pub background_color: Option<String>,
+
+    /// Color of the tile border
+    #[garde(skip)]
+    pub border_color: Option<String>,
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 #[serde(untagged)]
-pub enum ManifestBin {
+pub enum MBin {
     /// Program uses the node runtime
     Node {
         #[garde(dive)]
@@ -235,6 +267,8 @@ pub enum ManifestBin {
     },
 }
 
+/// Node "binary" which uses a node runtime to execute the js script
+/// at the provided `entrypoint`
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct ManifestBinNode {
     /// Entrypoint for the program
@@ -246,12 +280,19 @@ pub struct ManifestBinNode {
     pub version: BinaryNodeVersion,
 }
 
+/// Native binary for a specific os + arch combo, contains a
+/// path to the binary
 #[derive(Debug, Clone, Deserialize, Serialize, Validate)]
 pub struct ManifestBinNative {
+    // Target OS
     #[garde(skip)]
     pub os: OperatingSystem,
+
+    /// Target Arch
     #[garde(skip)]
     pub arch: Arch,
+
+    /// Path to the executable file
     #[garde(length(min = 1))]
     pub path: String,
 }
@@ -277,67 +318,4 @@ impl ManifestBinNative {
         let arch = platform_arch();
         Self::find_usable(options, &os, &arch)
     }
-}
-
-/// Separators allowed within names
-static NAME_SEPARATORS: [char; 2] = ['-', '_'];
-
-// Validates that a plugin name is valid
-fn is_valid_plugin_name(value: &str, _context: &()) -> garde::Result {
-    let parts = value.split('.');
-
-    for part in parts {
-        // Must start with a letter
-        if !part.starts_with(|char: char| char.is_ascii_alphabetic()) {
-            return Err(garde::Error::new(
-                "segment must start with a ascii alphabetic character",
-            ));
-        }
-
-        // Must only contain a-zA-Z0-9_-
-        if !part
-            .chars()
-            .all(|char| char.is_alphanumeric() || NAME_SEPARATORS.contains(&char))
-        {
-            return Err(garde::Error::new(
-                "plugin name domain segment must only contain alpha numeric values and _ or -",
-            ));
-        }
-
-        // Must not end with - or _
-        if part.ends_with(NAME_SEPARATORS) {
-            return Err(garde::Error::new(
-                "plugin name domain segment must not end with _ or -",
-            ));
-        }
-    }
-
-    Ok(())
-}
-
-// Validates that a action name is valid
-fn is_valid_action_name(value: &str, _context: &()) -> garde::Result {
-    // Must start with a letter
-    if !value.starts_with(|char: char| char.is_ascii_alphabetic()) {
-        return Err(garde::Error::new(
-            "action name must start with a ascii alphabetic character",
-        ));
-    }
-
-    // Must only contain a-zA-Z0-9_-
-    if !value
-        .chars()
-        .all(|char| char.is_alphanumeric() || NAME_SEPARATORS.contains(&char))
-    {
-        return Err(garde::Error::new(
-            "action name must only contain alpha numeric values and _ or -",
-        ));
-    }
-
-    // Must not end with - or _
-    if value.ends_with(NAME_SEPARATORS) {
-        return Err(garde::Error::new("action name must not end with _ or -"));
-    }
-
-    Ok(())
 }
