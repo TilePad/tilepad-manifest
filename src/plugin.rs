@@ -218,6 +218,11 @@ pub struct ManifestAction {
     #[garde(skip)]
     pub icon: Option<String>,
 
+    /// Path to a "display" HTML file that can be used to make
+    /// the tile into a display tile
+    #[garde(skip)]
+    pub display: Option<String>,
+
     /// Default options for the icon when added to the grid
     /// as a tile
     #[garde(dive)]
