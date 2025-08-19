@@ -1,7 +1,7 @@
 [package]
 name = "tilepad-manifest"
 description = "Manifest parsing and structures for tilepad plugins and icon packs"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 authors = ["Jacobtread <jacobtread@gmail.com>"]
 repository = "https://github.com/tilepad/tilepad-manifest"
