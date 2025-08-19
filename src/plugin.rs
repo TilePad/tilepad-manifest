@@ -282,7 +282,15 @@ pub struct MBinNode {
 
     /// Version of node the program should run using
     #[garde(skip)]
+    #[serde(default = "default_node_version")]
     pub version: BinaryNodeVersion,
+}
+
+/// Default node version to use
+fn default_node_version() -> BinaryNodeVersion {
+    BinaryNodeVersion(
+        node_semver::Range::parse("=22.18.0").expect("hardcoded range should be valid"),
+    )
 }
 
 /// Native binary for a specific os + arch combo, contains a
