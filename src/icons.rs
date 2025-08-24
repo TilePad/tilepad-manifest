@@ -6,7 +6,7 @@ use crate::{ManifestError, validation::validate_id};
 use garde::Validate;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 /// Manifest for an icon pack
 #[derive(Debug, Clone, Deserialize, Serialize, Validate, JsonSchema)]
@@ -116,5 +116,11 @@ impl FromStr for IconPackId {
         let value = IconPackId(s.to_string());
         value.validate()?;
         Ok(value)
+    }
+}
+
+impl Display for IconPackId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
