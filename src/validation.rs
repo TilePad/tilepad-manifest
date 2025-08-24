@@ -4,6 +4,7 @@ use garde::{
     error::{Kind, PathComponentKind},
 };
 
+/// Separators allowed in names
 static NAME_SEPARATORS: [char; 2] = ['-', '_'];
 
 /// Validate an ID (plugin ID or icon pack ID)
@@ -304,14 +305,68 @@ fn parse_percentage(s: &str) -> garde::Result {
 mod tests {
     use super::*;
 
-    fn ok(value: &str) {
+    #[test]
+    fn validate_id_allows_simple_valid_id() {
+        assert!(validate_id("plugin.test", &()).is_ok());
+        assert!(validate_id("abc.def123", &()).is_ok());
+        assert!(validate_id("abc-def.ghi_jkl", &()).is_ok());
+    }
+
+    #[test]
+    fn validate_id_fails_if_segment_does_not_start_with_letter() {
+        assert!(validate_id("1plugin.test", &()).is_err());
+        assert!(validate_id("plugin.1test", &()).is_err());
+        assert!(validate_id(".test", &()).is_err());
+    }
+
+    #[test]
+    fn validate_id_fails_if_segment_contains_invalid_characters() {
+        assert!(validate_id("plugin.te$t", &()).is_err());
+        assert!(validate_id("plugin.te st", &()).is_err());
+        assert!(validate_id("plugin.te+st", &()).is_err());
+    }
+
+    #[test]
+    fn validate_id_fails_if_segment_ends_with_separator() {
+        assert!(validate_id("plugin.test_", &()).is_err());
+        assert!(validate_id("plugin.test-", &()).is_err());
+        assert!(validate_id("abc_.def", &()).is_err());
+    }
+
+    #[test]
+    fn validate_name_allows_valid_name() {
+        assert!(validate_name("ActionName", &()).is_ok());
+        assert!(validate_name("my_action-1", &()).is_ok());
+    }
+
+    #[test]
+    fn validate_name_fails_if_not_starting_with_letter() {
+        assert!(validate_name("1Action", &()).is_err());
+        assert!(validate_name("_Action", &()).is_err());
+        assert!(validate_name("-Action", &()).is_err());
+    }
+
+    #[test]
+    fn validate_name_fails_on_invalid_characters() {
+        assert!(validate_name("Action!", &()).is_err());
+        assert!(validate_name("Action Name", &()).is_err());
+        assert!(validate_name("Action@", &()).is_err());
+    }
+
+    #[test]
+    fn validate_name_fails_if_ends_with_separator() {
+        assert!(validate_name("Action_", &()).is_err());
+        assert!(validate_name("Action-", &()).is_err());
+    }
+
+    fn color_ok(value: &str) {
         assert!(
             validate_color(value, &()).is_ok(),
             "Expected OK for {value}"
         );
     }
 
-    fn err(value: &str) {
+    fn color_err(value: &str) {
         assert!(
             validate_color(value, &()).is_err(),
             "Expected ERR for {value}"
@@ -320,87 +375,87 @@ mod tests {
 
     #[test]
     fn test_valid_hex_colors() {
-        ok("#fff");
-        ok("#ffff");
-        ok("#ffffff");
-        ok("#ffffffff");
-        ok("#ABC"); // uppercase allowed
-        ok("  #123456  "); // trimming
+        color_ok("#fff");
+        color_ok("#ffff");
+        color_ok("#ffffff");
+        color_ok("#ffffffff");
+        color_ok("#ABC"); // uppercase allowed
+        color_ok("  #123456  "); // trimming
     }
 
     #[test]
     fn test_invalid_hex_colors() {
-        err("fff"); // missing #
-        err("#ff"); // wrong length
-        err("#fffff"); // wrong length
-        err("#ggg"); // invalid hex digit
+        color_err("fff"); // missing #
+        color_err("#ff"); // wrong length
+        color_err("#fffff"); // wrong length
+        color_err("#ggg"); // invalid hex digit
     }
 
     #[test]
     fn test_valid_rgb_colors() {
-        ok("rgb(0,0,0)");
-        ok("rgb(255, 255, 255)");
-        ok("rgb(50%, 20%, 100%)");
+        color_ok("rgb(0,0,0)");
+        color_ok("rgb(255, 255, 255)");
+        color_ok("rgb(50%, 20%, 100%)");
     }
 
     #[test]
     fn test_invalid_rgb_colors() {
-        err("rgb()");
-        err("rgb(255,255)"); // not enough parts
-        err("rgb(255,255,255,0)"); // too many parts
-        err("rgb(300,0,0)"); // out of range
+        color_err("rgb()");
+        color_err("rgb(255,255)"); // not enough parts
+        color_err("rgb(255,255,255,0)"); // too many parts
+        color_err("rgb(300,0,0)"); // out of range
     }
 
     #[test]
     fn test_valid_rgba_colors() {
-        ok("rgba(0,0,0,0)");
-        ok("rgba(255,255,255,1)");
-        ok("rgba(100, 150, 200, 0.5)");
-        ok("rgba(10%,20%,30%,0.75)");
+        color_ok("rgba(0,0,0,0)");
+        color_ok("rgba(255,255,255,1)");
+        color_ok("rgba(100, 150, 200, 0.5)");
+        color_ok("rgba(10%,20%,30%,0.75)");
     }
 
     #[test]
     fn test_invalid_rgba_colors() {
-        err("rgba(255,255,255)"); // missing alpha
-        err("rgba(255,255,255,1,0)"); // too many parts
-        err("rgba(255,255,255,2)"); // alpha > 1
-        err("rgba(255,255,255,-0.1)"); // alpha < 0
+        color_err("rgba(255,255,255)"); // missing alpha
+        color_err("rgba(255,255,255,1,0)"); // too many parts
+        color_err("rgba(255,255,255,2)"); // alpha > 1
+        color_err("rgba(255,255,255,-0.1)"); // alpha < 0
     }
 
     #[test]
     fn test_valid_hsl_colors() {
-        ok("hsl(0,0%,0%)");
-        ok("hsl(360,100%,50%)");
-        ok("hsl(180, 50%, 25%)");
+        color_ok("hsl(0,0%,0%)");
+        color_ok("hsl(360,100%,50%)");
+        color_ok("hsl(180, 50%, 25%)");
     }
 
     #[test]
     fn test_invalid_hsl_colors() {
-        err("hsl()");
-        err("hsl(361,50%,50%)"); // hue too high
-        err("hsl(180,101%,50%)"); // percent > 100
-        err("hsl(180,50,50)"); // missing %
+        color_err("hsl()");
+        color_err("hsl(361,50%,50%)"); // hue too high
+        color_err("hsl(180,101%,50%)"); // percent > 100
+        color_err("hsl(180,50,50)"); // missing %
     }
 
     #[test]
     fn test_valid_hsla_colors() {
-        ok("hsla(0,0%,0%,0)");
-        ok("hsla(360,100%,50%,1)");
-        ok("hsla(180, 50%, 25%, 0.75)");
+        color_ok("hsla(0,0%,0%,0)");
+        color_ok("hsla(360,100%,50%,1)");
+        color_ok("hsla(180, 50%, 25%, 0.75)");
     }
 
     #[test]
     fn test_invalid_hsla_colors() {
-        err("hsla(180,50%,50%)"); // missing alpha
-        err("hsla(180,50%,50%,2)"); // alpha too big
-        err("hsla(361,50%,50%,0.5)"); // hue too big
-        err("hsla(180,50,50%,0.5)"); // missing % in second arg
+        color_err("hsla(180,50%,50%)"); // missing alpha
+        color_err("hsla(180,50%,50%,2)"); // alpha too big
+        color_err("hsla(361,50%,50%,0.5)"); // hue too big
+        color_err("hsla(180,50,50%,0.5)"); // missing % in second arg
     }
 
     #[test]
     fn test_invalid_general_cases() {
-        err("blue"); // named colors not supported
-        err(""); // empty string
-        err("123"); // junk input
+        color_err("blue"); // named colors not supported
+        color_err(""); // empty string
+        color_err("123"); // junk input
     }
 }

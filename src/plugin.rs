@@ -283,6 +283,7 @@ pub struct ManifestActionIconOptions {
     pub border_color: Option<String>,
 }
 
+/// Type of binary the plugin program is using
 #[derive(Debug, Clone, Deserialize, Serialize, Validate, JsonSchema)]
 #[serde(untagged)]
 pub enum MBin {

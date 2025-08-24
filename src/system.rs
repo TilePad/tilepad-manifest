@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
+/// Operating systems
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, EnumString, Display, Serialize, Deserialize, JsonSchema,
 )]
