@@ -63,8 +63,7 @@ impl AsRef<str> for PluginId {
 /// and its features
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(transparent)]
-#[schemars(with = "String")]
-#[schemars(example = "=22.18.0")]
+#[schemars(with = "String", example = "=22.18.0")]
 pub struct BinaryNodeVersion(pub node_semver::Range);
 
 impl AsRef<node_semver::Range> for BinaryNodeVersion {
@@ -115,6 +114,7 @@ impl TryFrom<&[u8]> for PluginManifest {
 }
 
 impl PluginManifest {
+    /// Parse a plugin manifest from a string
     #[inline]
     pub fn parse(value: &str) -> Result<PluginManifest, ManifestError> {
         Self::try_from(value)

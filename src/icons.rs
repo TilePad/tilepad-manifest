@@ -28,6 +28,7 @@ impl TryFrom<&str> for IconsManifest {
 
 impl TryFrom<&[u8]> for IconsManifest {
     type Error = ManifestError;
+
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         let manifest: IconsManifest = serde_json::from_slice(value)?;
         manifest.validate()?;
@@ -48,10 +49,12 @@ impl IconsManifest {
 pub struct Icon {
     /// Path to the icon file
     #[garde(length(min = 1))]
+    #[schemars(example = "images/icon.svg")]
     pub path: String,
 
     /// Name of the icon
     #[garde(length(min = 1))]
+    #[schemars(example = "My Icon")]
     pub name: String,
 }
 
@@ -63,18 +66,23 @@ pub struct MIconPack {
     pub id: IconPackId,
     /// Name of the icon pack
     #[garde(length(min = 1))]
+    #[schemars(example = "My Icon Pack")]
     pub name: String,
-    /// Version of the icon pack
+    /// Version of the icon pack, semver compatible version number
     #[garde(length(min = 1))]
+    #[schemars(example = "0.1.0")]
     pub version: String,
     /// List of authors for the pack
     #[garde(skip)]
+    #[schemars(example = ["Example Author 1", "Example Author 2"])]
     pub authors: Vec<String>,
     /// Description of the pack
     #[garde(skip)]
+    #[schemars(example = "My plugin that performs my actions")]
     pub description: Option<String>,
     /// Icon for the pack
     #[garde(skip)]
+    #[schemars(example = "images/icon.svg")]
     pub icon: Option<String>,
 }
 
@@ -86,6 +94,7 @@ pub struct MIconPack {
 )]
 #[garde(transparent)]
 #[serde(transparent)]
+#[schemars(example = &"com.example.my-pack")]
 pub struct IconPackId(#[garde(custom(validate_id))] pub String);
 
 impl IconPackId {

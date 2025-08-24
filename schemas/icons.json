@@ -32,11 +32,17 @@
         "name": {
           "description": "Name of the icon pack",
           "type": "string",
+          "examples": [
+            "My Icon Pack"
+          ],
           "minLength": 1
         },
         "version": {
-          "description": "Version of the icon pack",
+          "description": "Version of the icon pack, semver compatible version number",
           "type": "string",
+          "examples": [
+            "0.1.0"
+          ],
           "minLength": 1
         },
         "authors": {
@@ -44,13 +50,22 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "examples": [
+            [
+              "Example Author 1",
+              "Example Author 2"
+            ]
+          ]
         },
         "description": {
           "description": "Description of the pack",
           "type": [
             "string",
             "null"
+          ],
+          "examples": [
+            "My plugin that performs my actions"
           ]
         },
         "icon": {
@@ -58,6 +73,9 @@
           "type": [
             "string",
             "null"
+          ],
+          "examples": [
+            "images/icon.svg"
           ]
         }
       },
@@ -70,7 +88,10 @@
     },
     "IconPackId": {
       "description": "Unique ID for an icon pack\n\nUses reverse domain syntax (i.e com.example.my-pack)",
-      "type": "string"
+      "type": "string",
+      "examples": [
+        "com.example.my-pack"
+      ]
     }
   }
 }
