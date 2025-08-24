@@ -4,6 +4,8 @@
     "jacobtread",
     "tilepad",
     "schemars",
-    "hexdigit"
+    "hexdigit",
+    "serde",
+    "thiserror"
   ]
 }
