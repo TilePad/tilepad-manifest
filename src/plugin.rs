@@ -371,3 +371,93 @@ impl MBinNative {
         Self::find_usable(options, &os, &arch)
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_usable_true_when_matches() {
+        let bin = MBinNative {
+            os: OperatingSystem::Linux,
+            arch: Arch::X64,
+            path: "bin/linux-x64".to_string(),
+        };
+        assert!(bin.is_usable(&OperatingSystem::Linux, &Arch::X64));
+    }
+
+    #[test]
+    fn test_is_usable_false_when_os_mismatch() {
+        let bin = MBinNative {
+            os: OperatingSystem::Linux,
+            arch: Arch::X64,
+            path: "bin/linux-x64".to_string(),
+        };
+        assert!(!bin.is_usable(&OperatingSystem::Windows, &Arch::X64));
+    }
+
+    #[test]
+    fn test_is_usable_false_when_arch_mismatch() {
+        let bin = MBinNative {
+            os: OperatingSystem::Linux,
+            arch: Arch::X64,
+            path: "bin/linux-x64".to_string(),
+        };
+        assert!(!bin.is_usable(&OperatingSystem::Linux, &Arch::X86));
+    }
+
+    #[test]
+    fn test_find_usable_finds_correct_bin() {
+        let bins = vec![
+            MBinNative {
+                os: OperatingSystem::Windows,
+                arch: Arch::X64,
+                path: "bin/win-x64".to_string(),
+            },
+            MBinNative {
+                os: OperatingSystem::Linux,
+                arch: Arch::X64,
+                path: "bin/linux-x64".to_string(),
+            },
+        ];
+        let result = MBinNative::find_usable(&bins, &OperatingSystem::Linux, &Arch::X64);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().path, "bin/linux-x64");
+    }
+
+    #[test]
+    fn test_find_usable_returns_none_if_no_match() {
+        let bins = vec![
+            MBinNative {
+                os: OperatingSystem::Windows,
+                arch: Arch::X64,
+                path: "bin/win-x64".to_string(),
+            },
+            MBinNative {
+                os: OperatingSystem::MacOs,
+                arch: Arch::Arm64,
+                path: "bin/macos-arm64".to_string(),
+            },
+        ];
+        let result = MBinNative::find_usable(&bins, &OperatingSystem::Linux, &Arch::X64);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_find_usable_returns_first_match() {
+        let bins = vec![
+            MBinNative {
+                os: OperatingSystem::Linux,
+                arch: Arch::X64,
+                path: "bin/linux-x64-v1".to_string(),
+            },
+            MBinNative {
+                os: OperatingSystem::Linux,
+                arch: Arch::X64,
+                path: "bin/linux-x64-v2".to_string(),
+            },
+        ];
+        let result = MBinNative::find_usable(&bins, &OperatingSystem::Linux, &Arch::X64);
+        assert!(result.is_some());
+        assert_eq!(result.unwrap().path, "bin/linux-x64-v1");
+    }
+}
