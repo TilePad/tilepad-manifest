@@ -157,6 +157,9 @@ pub struct MPlugin {
 }
 
 /// Ordered map of actions defined within the plugin
+///
+/// Keys must be unique to each action following
+/// the [a-zA-Z_-] format (i.e example_action, my-action, MyAction)
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 pub struct ActionMap(pub IndexMap<ActionId, ManifestAction>);
 

@@ -124,6 +124,7 @@
       "type": "string"
     },
     "MBin": {
+      "description": "Type of binary the plugin program is using",
       "anyOf": [
         {
           "description": "Program uses the node runtime",
@@ -218,6 +219,7 @@
       ]
     },
     "OperatingSystem": {
+      "description": "Operating systems",
       "type": "string",
       "enum": [
         "windows",
@@ -263,7 +265,7 @@
       ]
     },
     "ActionMap": {
-      "description": "Ordered map of actions defined within the plugin",
+      "description": "Ordered map of actions defined within the plugin\n\nKeys must be unique to each action following\nthe [a-zA-Z_-] format (i.e example_action, my-action, MyAction)",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/definitions/ManifestAction"
