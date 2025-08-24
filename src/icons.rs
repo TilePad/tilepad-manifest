@@ -4,12 +4,14 @@
 
 use crate::{ManifestError, validation::validate_id};
 use garde::Validate;
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 /// Manifest for an icon pack
-#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate, JsonSchema)]
 pub struct IconsManifest {
+    /// Definition for the icon pack details
     #[garde(dive)]
     pub icons: MIconPack,
 }
@@ -34,6 +36,7 @@ impl TryFrom<&[u8]> for IconsManifest {
 }
 
 impl IconsManifest {
+    /// Parse an [IconsManifest] from a string
     #[inline]
     pub fn parse(value: &str) -> Result<IconsManifest, ManifestError> {
         Self::try_from(value)
@@ -41,7 +44,7 @@ impl IconsManifest {
 }
 
 /// Icon within an icon collection
-#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate, JsonSchema)]
 pub struct Icon {
     /// Path to the icon file
     #[garde(length(min = 1))]
@@ -53,7 +56,7 @@ pub struct Icon {
 }
 
 /// Icon pack details for the pack
-#[derive(Debug, Clone, Deserialize, Serialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Serialize, Validate, JsonSchema)]
 pub struct MIconPack {
     /// Unique ID of the icon pack (e.g com.jacobtread.tilepad.obs)
     #[garde(dive)]
@@ -78,12 +81,15 @@ pub struct MIconPack {
 /// Unique ID for an icon pack
 ///
 /// Uses reverse domain syntax (i.e com.example.my-pack)
-#[derive(Debug, Clone, Serialize, Deserialize, Validate, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, Validate, Hash, PartialEq, Eq, PartialOrd, Ord, JsonSchema,
+)]
 #[garde(transparent)]
 #[serde(transparent)]
 pub struct IconPackId(#[garde(custom(validate_id))] pub String);
 
 impl IconPackId {
+    /// Get the inner icon pack ID as a [str] slice
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }

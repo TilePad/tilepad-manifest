@@ -2,6 +2,8 @@
   "words": [
     "indexmap",
     "jacobtread",
-    "tilepad"
+    "tilepad",
+    "schemars",
+    "hexdigit"
   ]
 }

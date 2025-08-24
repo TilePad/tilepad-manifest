@@ -1,0 +1,376 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PluginManifest",
+  "description": "Manifest file format for plugins",
+  "type": "object",
+  "properties": {
+    "plugin": {
+      "description": "Details about the plugin itself",
+      "allOf": [
+        {
+          "$ref": "#/definitions/MPlugin"
+        }
+      ]
+    },
+    "bin": {
+      "description": "Details for running the plugin\n(Option not specified for internal plugins)",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MBin"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "category": {
+      "description": "Category for the manifest actions",
+      "allOf": [
+        {
+          "$ref": "#/definitions/MCategory"
+        }
+      ]
+    },
+    "actions": {
+      "description": "Map of available plugin actions",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ActionMap"
+        }
+      ]
+    }
+  },
+  "required": [
+    "plugin",
+    "category",
+    "actions"
+  ],
+  "definitions": {
+    "MPlugin": {
+      "description": "Plugin details section of the manifest",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique ID of the plugin (e.g com.jacobtread.tilepad.obs)",
+          "examples": [
+            "com.jacobtread.tilepad.obs"
+          ],
+          "allOf": [
+            {
+              "$ref": "#/definitions/PluginId"
+            }
+          ]
+        },
+        "name": {
+          "description": "Name of the plugin",
+          "type": "string",
+          "examples": [
+            "Example Plugin"
+          ],
+          "minLength": 1
+        },
+        "version": {
+          "description": "Current version of the plugin, semver compatible version number",
+          "type": "string",
+          "examples": [
+            "0.1.0"
+          ],
+          "minLength": 1
+        },
+        "authors": {
+          "description": "List of authors for the plugin",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            [
+              "Example Author 1",
+              "Example Author 2"
+            ]
+          ]
+        },
+        "description": {
+          "description": "Description of what the plugin does",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "My plugin that performs my actions"
+          ]
+        },
+        "icon": {
+          "description": "Icon for the plugin",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "images/icon.svg"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "authors"
+      ]
+    },
+    "PluginId": {
+      "description": "Unique ID for a plugin\n\nUses reverse domain syntax (i.e com.example.my-plugin)",
+      "type": "string"
+    },
+    "MBin": {
+      "anyOf": [
+        {
+          "description": "Program uses the node runtime",
+          "type": "object",
+          "properties": {
+            "node": {
+              "$ref": "#/definitions/MBinNode"
+            }
+          },
+          "required": [
+            "node"
+          ]
+        },
+        {
+          "description": "Program uses a native binary",
+          "type": "object",
+          "properties": {
+            "native": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MBinNative"
+              }
+            }
+          },
+          "required": [
+            "native"
+          ]
+        }
+      ]
+    },
+    "MBinNode": {
+      "description": "Node \"binary\" which uses a node runtime to execute the js script\nat the provided `entrypoint`",
+      "type": "object",
+      "properties": {
+        "entrypoint": {
+          "description": "Entrypoint for the program\n\ne.g bin/index.js",
+          "type": "string",
+          "examples": [
+            "bin/index.js"
+          ],
+          "minLength": 1
+        },
+        "version": {
+          "description": "Version of node the program should run using.\n\nIt's recommended that you leave\nthis as the default unless you explicitly need a specific version\nand its features",
+          "default": "22.18.0",
+          "allOf": [
+            {
+              "$ref": "#/definitions/BinaryNodeVersion"
+            }
+          ]
+        }
+      },
+      "required": [
+        "entrypoint"
+      ]
+    },
+    "BinaryNodeVersion": {
+      "description": "Version range of a node runtime, it's recommended that you leave\nthis as the default unless you explicitly need a specific version\nand its features",
+      "type": "string",
+      "examples": [
+        "=22.18.0"
+      ]
+    },
+    "MBinNative": {
+      "description": "Native binary for a specific os + arch combo, contains a\npath to the binary",
+      "type": "object",
+      "properties": {
+        "os": {
+          "$ref": "#/definitions/OperatingSystem"
+        },
+        "arch": {
+          "description": "Target Arch this binary should be used for",
+          "allOf": [
+            {
+              "$ref": "#/definitions/Arch"
+            }
+          ]
+        },
+        "path": {
+          "description": "Path to the executable file",
+          "type": "string",
+          "examples": [
+            "bin/example.exe"
+          ],
+          "minLength": 1
+        }
+      },
+      "required": [
+        "os",
+        "arch",
+        "path"
+      ]
+    },
+    "OperatingSystem": {
+      "type": "string",
+      "enum": [
+        "windows",
+        "macos",
+        "linux"
+      ]
+    },
+    "Arch": {
+      "description": "CPU architecture the binary is compiled as",
+      "type": "string",
+      "enum": [
+        "x86",
+        "x64",
+        "arm",
+        "arm64"
+      ]
+    },
+    "MCategory": {
+      "description": "Definition of the category to place the plugin actions within",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Label for the category in the actions sidebar",
+          "type": "string",
+          "examples": [
+            "My Category"
+          ],
+          "minLength": 1
+        },
+        "icon": {
+          "description": "Icon to show in the actions sidebar",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "images/icon.svg"
+          ]
+        }
+      },
+      "required": [
+        "label"
+      ]
+    },
+    "ActionMap": {
+      "description": "Ordered map of actions defined within the plugin",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/ManifestAction"
+      }
+    },
+    "ManifestAction": {
+      "description": "Manifest action definition",
+      "type": "object",
+      "properties": {
+        "label": {
+          "description": "Label for the action, shown in the sidebar",
+          "type": "string",
+          "examples": [
+            "My Action"
+          ],
+          "minLength": 1
+        },
+        "icon": {
+          "description": "Icon for the action, shown in the sidebar and\nused as the default icon when added to the grid",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "images/icon.svg"
+          ]
+        },
+        "display": {
+          "description": "Path to a \"display\" HTML file that can be used to make\nthe tile into a display tile",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "display/my-display.display.html"
+          ]
+        },
+        "icon_options": {
+          "description": "Default options for the icon when added to the grid\nas a tile",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ManifestActionIconOptions"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "description": {
+          "description": "Description for the action, shown as a tooltip when hovering\nthe action",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "My action"
+          ]
+        },
+        "inspector": {
+          "description": "Path to the inspector HTML file to use for configuring the action",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "inspector/index.html"
+          ]
+        }
+      },
+      "required": [
+        "label"
+      ]
+    },
+    "ManifestActionIconOptions": {
+      "description": "Default options for an action icon",
+      "type": "object",
+      "properties": {
+        "padding": {
+          "description": "Padding in pixels to pad the icon with",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0
+        },
+        "background_color": {
+          "description": "Color for the tile background behind the icon",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "#ffffff"
+          ]
+        },
+        "border_color": {
+          "description": "Color of the tile border",
+          "type": [
+            "string",
+            "null"
+          ],
+          "examples": [
+            "#ffffff"
+          ]
+        }
+      }
+    }
+  }
+}

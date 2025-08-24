@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IconsManifest",
+  "description": "Manifest for an icon pack",
+  "type": "object",
+  "properties": {
+    "icons": {
+      "description": "Definition for the icon pack details",
+      "allOf": [
+        {
+          "$ref": "#/definitions/MIconPack"
+        }
+      ]
+    }
+  },
+  "required": [
+    "icons"
+  ],
+  "definitions": {
+    "MIconPack": {
+      "description": "Icon pack details for the pack",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique ID of the icon pack (e.g com.jacobtread.tilepad.obs)",
+          "allOf": [
+            {
+              "$ref": "#/definitions/IconPackId"
+            }
+          ]
+        },
+        "name": {
+          "description": "Name of the icon pack",
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "description": "Version of the icon pack",
+          "type": "string",
+          "minLength": 1
+        },
+        "authors": {
+          "description": "List of authors for the pack",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description": {
+          "description": "Description of the pack",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "icon": {
+          "description": "Icon for the pack",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "authors"
+      ]
+    },
+    "IconPackId": {
+      "description": "Unique ID for an icon pack\n\nUses reverse domain syntax (i.e com.example.my-pack)",
+      "type": "string"
+    }
+  }
+}

@@ -82,3 +82,325 @@ impl PathComponentKind for ActionId {
         Kind::Key
     }
 }
+
+/// Validates that a string is a valid color value supports:
+/// - hex
+/// - rgb/rgba
+/// - hsl/hsla
+///
+/// Does not check for named colors, we don't really want those anyway
+/// as they aren't really useful
+pub fn validate_color(value: &str, _context: &()) -> garde::Result {
+    let value = value.trim().to_lowercase();
+
+    // Hex
+    if value.starts_with('#') {
+        return validate_hex_color(&value);
+    }
+
+    // RGB
+    if value.starts_with("rgb(") {
+        return validate_rgb_color(&value);
+    }
+
+    // RGBA
+    if value.starts_with("rgba(") {
+        return validate_rgba_color(&value);
+    }
+
+    // HSL
+    if value.starts_with("hsl(") {
+        return validate_hsl_color(&value);
+    }
+
+    // HSLA
+    if value.starts_with("hsla(") {
+        return validate_hsla_color(&value);
+    }
+
+    Err(garde::Error::new("invalid color value"))
+}
+
+/// Validate a hex color
+fn validate_hex_color(value: &str) -> garde::Result {
+    let value = value
+        .strip_prefix('#')
+        .ok_or_else(|| garde::Error::new("hex color must start with #"))?;
+
+    match value.len() {
+        3 | 4 | 6 | 8 => {}
+        _ => {
+            return Err(garde::Error::new(
+                "hex color must be 3, 4, 6, or 8 hex digits",
+            ));
+        }
+    }
+
+    if !value.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(garde::Error::new("hex color contains invalid characters"));
+    }
+
+    Ok(())
+}
+
+/// Validate a rgb() color
+fn validate_rgb_color(value: &str) -> garde::Result {
+    // Strip opening
+    let value = value
+        .strip_prefix("rgb(")
+        .ok_or_else(|| garde::Error::new("rgb color must start with rgb("))?;
+
+    // Strip closing
+    let value = value
+        .strip_suffix(")")
+        .ok_or_else(|| garde::Error::new("unclosed rgb color"))?;
+
+    let parts: Vec<&str> = value.split(',').map(|s| s.trim()).collect();
+
+    if parts.len() != 3 {
+        return Err(garde::Error::new("invalid rgb color"));
+    }
+
+    for part in parts {
+        parse_rgb_component(part)?;
+    }
+
+    Ok(())
+}
+
+/// Validate a rgba() color
+fn validate_rgba_color(value: &str) -> garde::Result {
+    // Strip opening
+    let value = value
+        .strip_prefix("rgba(")
+        .ok_or_else(|| garde::Error::new("rgba color must start with rgba("))?;
+
+    // Strip closing
+    let value = value
+        .strip_suffix(")")
+        .ok_or_else(|| garde::Error::new("unclosed rgba color"))?;
+
+    let parts: Vec<&str> = value.split(',').map(|s| s.trim()).collect();
+
+    if parts.len() != 4 {
+        return Err(garde::Error::new("invalid rgba color"));
+    }
+
+    // RGB components
+    for part in &parts[..3] {
+        parse_rgb_component(part)?;
+    }
+
+    // Alpha component
+    parse_alpha(parts[3])?;
+
+    Ok(())
+}
+
+/// Validate a hsl() color
+fn validate_hsl_color(value: &str) -> garde::Result {
+    // Strip opening
+    let value = value
+        .strip_prefix("hsl(")
+        .ok_or_else(|| garde::Error::new("hsl color must start with hsl("))?;
+
+    // Strip closing
+    let value = value
+        .strip_suffix(")")
+        .ok_or_else(|| garde::Error::new("unclosed hsl color"))?;
+
+    let parts: Vec<&str> = value.split(',').map(|s| s.trim()).collect();
+
+    if parts.len() != 3 {
+        return Err(garde::Error::new("invalid hsl color"));
+    }
+
+    parse_hue(parts[0])?;
+    parse_percentage(parts[1])?;
+    parse_percentage(parts[2])?;
+
+    Ok(())
+}
+
+/// Validate a hsla() color
+fn validate_hsla_color(value: &str) -> garde::Result {
+    // Strip opening
+    let value = value
+        .strip_prefix("hsla(")
+        .ok_or_else(|| garde::Error::new("hsla color must start with hsla("))?;
+
+    // Strip closing
+    let value = value
+        .strip_suffix(")")
+        .ok_or_else(|| garde::Error::new("unclosed hsla color"))?;
+
+    let parts: Vec<&str> = value.split(',').map(|s| s.trim()).collect();
+
+    if parts.len() != 4 {
+        return Err(garde::Error::new("invalid hsla color"));
+    }
+
+    parse_hue(parts[0])?;
+    parse_percentage(parts[1])?;
+    parse_percentage(parts[2])?;
+    parse_alpha(parts[3])?;
+
+    Ok(())
+}
+
+/// Parse an RGB component (0–255 or 0–100%)
+fn parse_rgb_component(s: &str) -> garde::Result {
+    if s.ends_with('%') {
+        return parse_percentage(s);
+    }
+
+    let v: u16 = s.parse().map_err(|_| garde::Error::new("invalid number"))?;
+    if v > 255 {
+        return Err(garde::Error::new("rgb exceeded 255 bound"));
+    }
+
+    Ok(())
+}
+
+/// Parse an alpha channel (0–1)
+fn parse_alpha(s: &str) -> garde::Result {
+    if s.parse::<f64>()
+        .is_ok_and(|value| (0.0..=1.0).contains(&value))
+    {
+        return Ok(());
+    }
+
+    Err(garde::Error::new("invalid alpha"))
+}
+
+/// Parse hue (0–360)
+fn parse_hue(s: &str) -> garde::Result {
+    let value: u16 = s.parse().map_err(|_| garde::Error::new("invalid hue"))?;
+    if value > 360 {
+        return Err(garde::Error::new("hue must not be greater than 360"));
+    }
+
+    Ok(())
+}
+
+/// Parse percentage (0–100%)
+fn parse_percentage(s: &str) -> garde::Result {
+    let number = s
+        .strip_suffix('%')
+        .ok_or_else(|| garde::Error::new("missing % sign"))?;
+
+    let value: u8 = number
+        .parse()
+        .map_err(|_| garde::Error::new("invalid percent"))?;
+
+    if value > 100 {
+        return Err(garde::Error::new("percent > 100"));
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ok(value: &str) {
+        assert!(
+            validate_color(value, &()).is_ok(),
+            "Expected OK for {value}"
+        );
+    }
+
+    fn err(value: &str) {
+        assert!(
+            validate_color(value, &()).is_err(),
+            "Expected ERR for {value}"
+        );
+    }
+
+    #[test]
+    fn test_valid_hex_colors() {
+        ok("#fff");
+        ok("#ffff");
+        ok("#ffffff");
+        ok("#ffffffff");
+        ok("#ABC"); // uppercase allowed
+        ok("  #123456  "); // trimming
+    }
+
+    #[test]
+    fn test_invalid_hex_colors() {
+        err("fff"); // missing #
+        err("#ff"); // wrong length
+        err("#fffff"); // wrong length
+        err("#ggg"); // invalid hex digit
+    }
+
+    #[test]
+    fn test_valid_rgb_colors() {
+        ok("rgb(0,0,0)");
+        ok("rgb(255, 255, 255)");
+        ok("rgb(50%, 20%, 100%)");
+    }
+
+    #[test]
+    fn test_invalid_rgb_colors() {
+        err("rgb()");
+        err("rgb(255,255)"); // not enough parts
+        err("rgb(255,255,255,0)"); // too many parts
+        err("rgb(300,0,0)"); // out of range
+    }
+
+    #[test]
+    fn test_valid_rgba_colors() {
+        ok("rgba(0,0,0,0)");
+        ok("rgba(255,255,255,1)");
+        ok("rgba(100, 150, 200, 0.5)");
+        ok("rgba(10%,20%,30%,0.75)");
+    }
+
+    #[test]
+    fn test_invalid_rgba_colors() {
+        err("rgba(255,255,255)"); // missing alpha
+        err("rgba(255,255,255,1,0)"); // too many parts
+        err("rgba(255,255,255,2)"); // alpha > 1
+        err("rgba(255,255,255,-0.1)"); // alpha < 0
+    }
+
+    #[test]
+    fn test_valid_hsl_colors() {
+        ok("hsl(0,0%,0%)");
+        ok("hsl(360,100%,50%)");
+        ok("hsl(180, 50%, 25%)");
+    }
+
+    #[test]
+    fn test_invalid_hsl_colors() {
+        err("hsl()");
+        err("hsl(361,50%,50%)"); // hue too high
+        err("hsl(180,101%,50%)"); // percent > 100
+        err("hsl(180,50,50)"); // missing %
+    }
+
+    #[test]
+    fn test_valid_hsla_colors() {
+        ok("hsla(0,0%,0%,0)");
+        ok("hsla(360,100%,50%,1)");
+        ok("hsla(180, 50%, 25%, 0.75)");
+    }
+
+    #[test]
+    fn test_invalid_hsla_colors() {
+        err("hsla(180,50%,50%)"); // missing alpha
+        err("hsla(180,50%,50%,2)"); // alpha too big
+        err("hsla(361,50%,50%,0.5)"); // hue too big
+        err("hsla(180,50,50%,0.5)"); // missing % in second arg
+    }
+
+    #[test]
+    fn test_invalid_general_cases() {
+        err("blue"); // named colors not supported
+        err(""); // empty string
+        err("123"); // junk input
+    }
+}
